@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LeetPulse — Frontend
 
-## Getting Started
+Next.js 16 dashboard for AI-powered LeetCode analytics and coaching.
 
-First, run the development server:
+## Architecture
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+Browser
+  │
+  ├── /                   Landing page  (username + company selector)
+  │                             │
+  │                             ▼  redirect: /dashboard?username=X&company=Y
+  │
+  └── /dashboard          DashboardClient.tsx
+                               │
+                               ├── GET  /analyze/{username}   ──▶ 8 analytics cards
+                               │                                   Hero · Difficulty · Topics
+                               │                                   Streak · Languages · Submissions
+                               │                                   Contest
+                               │
+                               └── POST /insights/{username}  ──▶ AI Coaching card
+                                     body: { target_company }      Summary · Strengths · Improvements
+                                                                    4-Week Study Plan (expandable)
+                                                                    Regenerate with new company
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_BASE_URL` | Yes | Base URL of the FastAPI backend |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` to `.env.local` and set the value:
 
-## Learn More
+```bash
+cp .env.example .env.local
+```
 
-To learn more about Next.js, take a look at the following resources:
+For local development the backend runs on `http://localhost:8000`.
+For production set it to your deployed backend URL.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Local Setup
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Requirements:** Node.js 18+
 
-## Deploy on Vercel
+```bash
+# 1. Install dependencies
+npm install
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# 2. Add environment variables
+cp .env.example .env.local
+# edit .env.local if your backend runs on a different port
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# 3. Start the dev server
+npm run dev
+```
+
+Open `http://localhost:3000` in your browser.
+
+## Running Both Services Together
+
+```bash
+# Terminal 1 — backend
+cd leetpulse-backend
+source venv/bin/activate
+uvicorn app.main:app --reload
+
+# Terminal 2 — frontend
+cd leetpulse-frontend
+npm run dev
+```
+
+## Project Structure
+
+```
+app/
+├── page.tsx               # Landing page — username input + company selector
+├── layout.tsx             # Root layout — Syne + DM Sans fonts, metadata
+├── globals.css            # Tailwind import, dark theme CSS variables
+└── dashboard/
+    ├── page.tsx           # Suspense wrapper (server component)
+    └── DashboardClient.tsx  # All 8 dashboard cards (client component)
+```
+
+## Dashboard Cards
+
+| Card | Data source |
+|---|---|
+| Hero | `analytics.username`, `analytics.consistency`, `analytics.contest` |
+| Difficulty Breakdown | `analytics.difficulty` |
+| Topic Explorer | `analytics.topics`, `analytics.strong_topics`, `analytics.weak_topics` |
+| Streak & Activity | `analytics.consistency` |
+| Languages | `analytics.languages` |
+| Recent Submissions | `analytics.recent_submissions` |
+| Contest Stats | `analytics.contest` |
+| AI Coaching | `insights.*` — regeneratable per-company without page reload |
+
+## Deployment — Vercel
+
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+vercel
+# Follow prompts — it auto-detects Next.js
+
+# Set the backend URL in Vercel dashboard:
+# Project → Settings → Environment Variables
+# NEXT_PUBLIC_API_BASE_URL = https://your-backend.fly.dev
+```
+
+Or connect the GitHub repo in the Vercel dashboard for automatic deploys on push.
