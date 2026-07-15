@@ -82,6 +82,7 @@ type InsightsResponse = {
   improvements: string[];
   study_plan: WeekPlan[];
   target_company: string | null;
+  rag_grounded: boolean;
 };
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
@@ -799,6 +800,16 @@ function ContestCard({ data }: { data: AnalyticsResponse }) {
   );
 }
 
+// ─── Helpers (AI Coaching) ────────────────────────────────────────────────────
+
+function problemToSlug(prob: string): { name: string; difficulty: string; slug: string } {
+  const match = prob.match(/^(.*?)\s*\[(Easy|Medium|Hard)\]\s*$/i);
+  const name       = match ? match[1].trim() : prob.replace(/\s*\[.*?\]\s*$/, "").trim();
+  const difficulty = match ? match[2] : "";
+  const slug = name.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-");
+  return { name, difficulty, slug };
+}
+
 // ─── Card 8: AI Coaching ──────────────────────────────────────────────────────
 
 function CoachingCard({
@@ -824,17 +835,30 @@ function CoachingCard({
         <h2 style={{ fontFamily: spaceGrotesk.style.fontFamily, fontSize: 16, fontWeight: 700, color: C.text, margin: 0 }}>
           AI Coaching
         </h2>
-        {insights?.target_company && (
-          <span
-            style={{
-              padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600,
-              backgroundColor: C.amberDim, border: `1px solid ${C.amberBorder}`,
-              color: C.amber, fontFamily: inter.style.fontFamily,
-            }}
-          >
-            Tailored for {insights.target_company.charAt(0).toUpperCase() + insights.target_company.slice(1)}
-          </span>
-        )}
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {insights?.target_company && (
+            <span
+              style={{
+                padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600,
+                backgroundColor: C.amberDim, border: `1px solid ${C.amberBorder}`,
+                color: C.amber, fontFamily: inter.style.fontFamily,
+              }}
+            >
+              Tailored for {insights.target_company.charAt(0).toUpperCase() + insights.target_company.slice(1)}
+            </span>
+          )}
+          {insights?.rag_grounded && (
+            <span
+              style={{
+                padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600,
+                backgroundColor: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)",
+                color: C.green, fontFamily: inter.style.fontFamily,
+              }}
+            >
+              ⚡ Grounded in real company data
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Loading spinner */}
@@ -993,19 +1017,30 @@ function CoachingCard({
                       Practice:
                     </p>
                     <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 5 }}>
-                      {week.example_problems.map((prob) => (
-                        <li key={prob} style={{
-                          fontFamily: ibmPlexMono.style.fontFamily,
-                          fontSize: 13,
-                          color: "#a1a1aa",
-                          display: "flex",
-                          gap: 8,
-                          alignItems: "baseline",
-                        }}>
-                          <span style={{ color: C.amber, flexShrink: 0, fontSize: 11 }}>→</span>
-                          {prob}
-                        </li>
-                      ))}
+                      {week.example_problems.map((prob) => {
+                        const { name, difficulty, slug } = problemToSlug(prob);
+                        return (
+                          <li key={prob} style={{
+                            fontFamily: ibmPlexMono.style.fontFamily,
+                            fontSize: 13,
+                            color: "#a1a1aa",
+                            display: "flex",
+                            gap: 8,
+                            alignItems: "baseline",
+                          }}>
+                            <a
+                              href={`https://leetcode.com/problems/${slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: C.amber, textDecoration: "none" }}
+                              onMouseEnter={(e) => { e.currentTarget.style.color = "#fcd34d"; e.currentTarget.style.textDecoration = "underline"; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.color = C.amber; e.currentTarget.style.textDecoration = "none"; }}
+                            >
+                              → {name}{difficulty ? ` [${difficulty}]` : ""}
+                            </a>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </div>
                 </div>
